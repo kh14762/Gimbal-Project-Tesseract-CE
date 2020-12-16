@@ -8,11 +8,49 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
-#include "MPU6050.h"
 #include <Thread.h>
 #include <ThreadController.h>
 #include <I2Cdev.h>
 #include <AutoPID.h>
+#include <SD.h>
+#include <SPIFlash.h>
+#include <Servo.h>
+#include "MPU6050.h"
+
+//set up LEDs and buzzer
+//define system led pins
+int R_LED = 9;
+int G_LED = 2;
+int B_LED = 6;
+int Buzzer = 10;
+
+//SD card setup
+Sd2Card card;
+SdVolume volume;
+SdFile root;
+const int SDchipSelect = 0;
+
+//This for the SPI Flash chip
+#define CHIPSIZE MB64
+SPIFlash flash(1);
+uint8_t pageBuffer[256];
+char printBuffer[128];
+uint16_t page;
+uint8_t offset, dataByte;
+uint16_t dataInt;
+String inputString, outString;
+
+//initilize pyro channel values
+int Pyro1 = 20;
+int Pyro2 = 21;
+int Pyro3 = 22;
+int Pyro4 = 23;
+
+//initialize TVC servos
+int TVCXpin = 3;
+int TVCYpin = 4;
+Servo TVCXservp;
+Servo TVCYservp;
 
 Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
@@ -22,6 +60,8 @@ MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 #define OUTPUT_READABLE_ACCELGYRO
+
+//Cal
 
 //Create a new AutoPID object
 AutoPID myPID(double *input, double *setpoint, double *output,
@@ -39,19 +79,23 @@ String videoTitle;
 
 void turnOnTurnOffL();
 void init_BMPsensor();
-void printBMPSensorDetails();
+void init_LEDlights();
 void init_IMUSensor();
+void printBMPSensorDetails();
 void i2c_Scanner();
 void PIDfunc();
+
 
 #define LED_PIN 11
 bool blinkState = false;
 
 // the setup routine runs once when you press reset:
 void setup() {
+  //setup BMP sensor
   init_BMPsensor();
-  // accelgyro.initialize();
-  //  Serial.println(accelgyro.testConnection() ? "Found it! MPU6050 connection successful." : "MPU6050 connection failed :(");
+  //setup LED Lights
+  init_LEDlights();
+  
 }
 
 
@@ -117,6 +161,19 @@ void turnOnTurnOffL() {
   delay(100);               // wait for a second
   digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
   delay(100);
+}
+
+void init_LEDlights() {
+  //set sytem led pins as outputs
+  pinMode(R_LED, OUTPUT);
+  pinMode(G_LED, OUTPUT);
+  pinMode(B_LED, OUTPUT);
+
+//using common anode LED, so write LOW to turn it on and High to turn if off
+  digitalWrite(R_LED, HIGH);
+  digitalWrite(G_LED, HIGH);
+  digitalWrite(B_LED, HIGH);
+  
 }
 
 void init_BMPsensor() {
@@ -238,6 +295,8 @@ void printMPUSensorReadout() {
   digitalWrite(LED_PIN, blinkState);
   delay(100);
 }
+
+
 
 void PIDfunc() {
   /*
