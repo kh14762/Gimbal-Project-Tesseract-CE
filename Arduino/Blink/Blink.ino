@@ -80,7 +80,7 @@ String videoTitle;
 void turnOnTurnOffL();
 void init_BMPsensor();
 void init_LEDlights();
-void init_IMUSensor();
+void init_MPUSensor();
 void printBMPSensorDetails();
 void i2c_Scanner();
 void PIDfunc();
@@ -93,6 +93,8 @@ bool blinkState = false;
 void setup() {
   //setup BMP sensor
   init_BMPsensor();
+  //setup MPU sensor
+  init_MPUsensor();
   //setup LED Lights
   init_LEDlights();
   
@@ -197,7 +199,7 @@ void init_BMPsensor() {
   }
 }
 
-void initBMPsensor() {
+void init_MPUsensor() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
