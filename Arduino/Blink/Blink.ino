@@ -295,7 +295,7 @@ void printMPUSensorReadout() {
   //blink LED to indicate activity
   blinkState = !blinkState;
   digitalWrite(LED_PIN, blinkState);
-  delay(2000);
+  delay(100);
 }
 
 
