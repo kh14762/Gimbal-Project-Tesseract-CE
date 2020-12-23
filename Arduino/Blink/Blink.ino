@@ -57,9 +57,38 @@ Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
 Adafruit_Sensor *bmp_pressure = bmp.getPressureSensor();
 
 MPU6050 accelgyro;
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
+int16_t accelRawX, accelRawY, accelRawZ;
+int16_t gyroRawX, gyroRawY, gyroRawZ;
+
+float angle_from_AccX;
+float angle_from_AccY;
+
+float angle_from_GyroX;
+float angle_from_GyroY;
+
+float angle_totalX;
+float angle_totalY;
+
+float elipsedTime;
+float time;
+float timPrev;
+int i;
+float pi = 180/3.141592654;
+
+float PID, pvmLeft, pvmRight, error, previous_error;
+float pid_p = 0;
+float pid_i = 0;
+float pid_d = 0;
+//PID constants
+double kp = 3.44;
+double ki = 0.048;
+double kd =1.92; //2.6
+
+double throttle = 1300;
+float desired_angle = 0;
+
 #define OUTPUT_READABLE_ACCELGYRO
+
 
 //Cal
 
@@ -107,10 +136,10 @@ void setup() {
 void loop() {
 
 
-  //turnOnTurnOffL();
+  turnOnTurnOffL();
   printBMPSensorDetails();
   printMPUSensorReadout();
-  //i2c_Scanner();
+  i2c_Scanner();
 
 
 
@@ -266,30 +295,30 @@ void printBMPSensorDetails() {
 
 void printMPUSensorReadout() {
   //read raw accel/gyro measurements from this device
-  accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  accelgyro.getMotion6(&accelRawX, &accelRawY, &accelRawZ, &gyroRawX, &gyroRawY, &gyroRawZ);
 
   //other available methods
-  //accelgyro.getAcceleration(&ax, &ay, &az);
-  //accelgyro.getRotation(&gx, &gy, &gz);
+  //accelgyro.getAcceleration(&accelRawX, &accelRawY, &accelRawZ, &gyroRawX, &gyroRawY, &gyroRawZ);
+  //accelgyro.getRotation(&accelRawX, &accelRawY, &accelRawZ, &gyroRawX, &gyroRawY, &gyroRawZ);
 
 #ifdef OUTPUT_READABLE_ACCELGYRO
   //display tab-sepaerated accel/gyro x/y/z values
   Serial.print("a/g:\t");
-  Serial.print(ax); Serial.print("\t");
-  Serial.print(ay); Serial.print("\t");
-  Serial.print(az); Serial.print("\t");
-  Serial.print(gx); Serial.print("\t");
-  Serial.print(gy); Serial.print("\t");
-  Serial.println(gz);
+  Serial.print(accelRawX); Serial.print("\t");
+  Serial.print(accelRawY); Serial.print("\t");
+  Serial.print(accelRawZ); Serial.print("\t");
+  Serial.print(gyroRawX); Serial.print("\t");
+  Serial.print(gyroRawY); Serial.print("\t");
+  Serial.println(gyroRawZ);
 #endif
 
 #ifdef OUTPUT_BINARY_ACCELGYRO
-  Serial.write((uint8_t)(ax >> 8)); Serial.write((uint8_t)(ax & 0xFF));
-  Serial.write((uint8_t)(ay >> 8)); Serial.write((uint8_t)(ay & 0xFF));
-  Serial.write((uint8_t)(az >> 8)); Serial.write((uint8_t)(az & 0xFF));
-  Serial.write((uint8_t)(gx >> 8)); Serial.write((uint8_t)(gx & 0xFF));
-  Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
-  Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
+  Serial.write((uint8_t)(accelRawX >> 8)); Serial.write((uint8_t)(accelRawX & 0xFF));
+  Serial.write((uint8_t)(accelRawY >> 8)); Serial.write((uint8_t)(accelRawY & 0xFF));
+  Serial.write((uint8_t)(accelRawZ >> 8)); Serial.write((uint8_t)(accelRawZ & 0xFF));
+  Serial.write((uint8_t)(gyroRawX >> 8)); Serial.write((uint8_t)(gyroRawX & 0xFF));
+  Serial.write((uint8_t)(gyroRawY >> 8)); Serial.write((uint8_t)(gyroRawY & 0xFF));
+  Serial.write((uint8_t)(gyroRawZ >> 8)); Serial.write((uint8_t)(gyroRawZ & 0xFF));
 #endif
 
   //blink LED to indicate activity
