@@ -8,16 +8,13 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
-#include <Thread.h>
-#include <ThreadController.h>
 #include <I2Cdev.h>
-#include <AutoPID.h>
 #include <SD.h>
 #include <SPIFlash.h>
 #include <Servo.h>
-#include "MPU6050.h"
+#include <MPU6050_tockn.h>
 
-//set up LEDs and buzzer
+//set up LEDs and buzzer hello ...Kev7n...Kev?n...ㅏㄸ퍄ㅜ 
 //define system led pins
 int R_LED = 9;
 int G_LED = 2;
@@ -56,24 +53,8 @@ Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
 Adafruit_Sensor *bmp_pressure = bmp.getPressureSensor();
 
-MPU6050 accelgyro;
-int16_t accelRawX, accelRawY, accelRawZ;
-int16_t gyroRawX, gyroRawY, gyroRawZ;
-
-float angle_from_AccX;
-float angle_from_AccY;
-
-float angle_from_GyroX;
-float angle_from_GyroY;
-
-float angle_totalX;
-float angle_totalY;
-
-float elipsedTime;
-float time;
-float timPrev;
-int i;
-float pi = 180/3.141592654;
+//create and initialized MPU object
+MPU6050 mpu6050(Wire);
 
 float PID, pvmLeft, pvmRight, error, previous_error;
 float pid_p = 0;
@@ -84,32 +65,16 @@ double kp = 3.44;
 double ki = 0.048;
 double kd =1.92; //2.6
 
-double throttle = 1300;
-float desired_angle = 0;
-
-#define OUTPUT_READABLE_ACCELGYRO
-
-
-//Cal
-
-//Create a new AutoPID object
-AutoPID myPID(double *input, double *setpoint, double *output,
-              double outputMin, double outputMax,
-              double Kp, double Ki, double Kd);
-
 // Pin 13 has an LED connected on most Arduino boards.
 // Pin 11 has the LED on Teensy 2.0
 // Pin 6  has the LED on Teensy++ 2.0
 // Pin 13 has the LED on Teensy 3.0
 // give it a name:
 int led = 13;
-String myName;
-String videoTitle;
-
 void turnOnTurnOffL();
 void init_BMPsensor();
 void init_LEDlights();
-void init_MPUSensor();
+void printMPUAngles();
 void printBMPSensorDetails();
 void i2c_Scanner();
 void PIDfunc();
@@ -120,10 +85,16 @@ bool blinkState = false;
 
 // the setup routine runs once when you press reset:
 void setup() {
+  //Initialize & begin Serial
+  Serial.begin(9600);
+  //Initialize & begin Wire
+  Wire.begin();
+  //begin and set calcGyroOffsets to true
+  mpu6050.begin();
+  mpu6050.calcGyroOffsets(true);
+  
   //setup BMP sensor
   init_BMPsensor();
-  //setup MPU sensor
-  init_MPUsensor();
   //setup LED Lights
   init_LEDlights();
   
@@ -138,8 +109,7 @@ void loop() {
 
   turnOnTurnOffL();
   printBMPSensorDetails();
-  printMPUSensorReadout();
-  i2c_Scanner();
+  printMPUAngles();
 
 
 
@@ -210,8 +180,6 @@ void init_LEDlights() {
 void init_BMPsensor() {
   // initialize the digital pin as an output.
   pinMode(led, OUTPUT);
-  //Initialize & begin Serial
-  Serial.begin(9600);
   Serial.println(F("BMP280 Sensor event test"));
   if (!bmp.begin()) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
@@ -226,54 +194,6 @@ void init_BMPsensor() {
 
     bmp_temp->printSensorDetails();
   }
-}
-
-void init_MPUsensor() {
-  // join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  Wire.begin();
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-  Fastwire::setup(400, true);
-#endif
-
-  // initialize serial communication
-  // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
-  // it's really up to you depending on your project)
-  Serial.begin(38400);
-
-  // initialize device
-  Serial.println("Initializing I2C devices...");
-  accelgyro.initialize();
-
-  // verify connection
-  Serial.println("Testing device connections...");
-  Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
-
-  // use the code below to change accel/gyro offset values
-  /*
-    Serial.println("Updating internal sensor offsets...");
-    // -76 -2359 1688  0 0 0
-    Serial.print(accelgyro.getXAccelOffset()); Serial.print("\t"); // -76
-    Serial.print(accelgyro.getYAccelOffset()); Serial.print("\t"); // -2359
-    Serial.print(accelgyro.getZAccelOffset()); Serial.print("\t"); // 1688
-    Serial.print(accelgyro.getXGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getYGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getZGyroOffset()); Serial.print("\t"); // 0
-    Serial.print("\n");
-    accelgyro.setXGyroOffset(220);
-    accelgyro.setYGyroOffset(76);
-    accelgyro.setZGyroOffset(-85);
-    Serial.print(accelgyro.getXAccelOffset()); Serial.print("\t"); // -76
-    Serial.print(accelgyro.getYAccelOffset()); Serial.print("\t"); // -2359
-    Serial.print(accelgyro.getZAccelOffset()); Serial.print("\t"); // 1688
-    Serial.print(accelgyro.getXGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getYGyroOffset()); Serial.print("\t"); // 0
-    Serial.print(accelgyro.getZGyroOffset()); Serial.print("\t"); // 0
-    Serial.print("\n");
-  */
-
-  // configure Arduino LED for
-  pinMode(LED_PIN, OUTPUT);
 }
 
 void printBMPSensorDetails() {
@@ -293,54 +213,12 @@ void printBMPSensorDetails() {
   Serial.println();
 }
 
-void printMPUSensorReadout() {
-  //read raw accel/gyro measurements from this device
-  accelgyro.getMotion6(&accelRawX, &accelRawY, &accelRawZ, &gyroRawX, &gyroRawY, &gyroRawZ);
-
-  //other available methods
-  //accelgyro.getAcceleration(&accelRawX, &accelRawY, &accelRawZ, &gyroRawX, &gyroRawY, &gyroRawZ);
-  //accelgyro.getRotation(&accelRawX, &accelRawY, &accelRawZ, &gyroRawX, &gyroRawY, &gyroRawZ);
-
-#ifdef OUTPUT_READABLE_ACCELGYRO
-  //display tab-sepaerated accel/gyro x/y/z values
-  Serial.print("a/g:\t");
-  Serial.print(accelRawX); Serial.print("\t");
-  Serial.print(accelRawY); Serial.print("\t");
-  Serial.print(accelRawZ); Serial.print("\t");
-  Serial.print(gyroRawX); Serial.print("\t");
-  Serial.print(gyroRawY); Serial.print("\t");
-  Serial.println(gyroRawZ);
-#endif
-
-#ifdef OUTPUT_BINARY_ACCELGYRO
-  Serial.write((uint8_t)(accelRawX >> 8)); Serial.write((uint8_t)(accelRawX & 0xFF));
-  Serial.write((uint8_t)(accelRawY >> 8)); Serial.write((uint8_t)(accelRawY & 0xFF));
-  Serial.write((uint8_t)(accelRawZ >> 8)); Serial.write((uint8_t)(accelRawZ & 0xFF));
-  Serial.write((uint8_t)(gyroRawX >> 8)); Serial.write((uint8_t)(gyroRawX & 0xFF));
-  Serial.write((uint8_t)(gyroRawY >> 8)); Serial.write((uint8_t)(gyroRawY & 0xFF));
-  Serial.write((uint8_t)(gyroRawZ >> 8)); Serial.write((uint8_t)(gyroRawZ & 0xFF));
-#endif
-
-  //blink LED to indicate activity
-  blinkState = !blinkState;
-  digitalWrite(LED_PIN, blinkState);
-  delay(100);
-}
-
-
-
-void PIDfunc() {
-  /*
-     previous_error := 0
-    integral := 0
-
-    loop:
-      error := setpoint − measured_value
-      integral := integral + error × dt
-      derivative := (error − previous_error) / dt
-      output := Kp × error + Ki × integral + Kd × derivative
-      previous_error := error
-      wait(dt)
-      goto loop
-  */
+void printMPUAngles() {
+  mpu6050.update();
+  Serial.print("angleX : ");
+  Serial.print(mpu6050.getAngleX());
+  Serial.print("\tangleY : ");
+  Serial.print(mpu6050.getAngleY());
+  Serial.print("\tangleZ : ");
+  Serial.println(mpu6050.getAngleZ());
 }
