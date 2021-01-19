@@ -20,6 +20,7 @@ int R_LED = 9;
 int G_LED = 2;
 int B_LED = 6;
 int Buzzer = 10;
+int pos = 0;
 
 //SD card setup
 Sd2Card card;
@@ -46,8 +47,8 @@ int Pyro4 = 23;
 //initialize TVC servos
 int TVCXpin = 3;
 int TVCYpin = 4;
-Servo TVCXservp;
-Servo TVCYservp;
+Servo TVCXservo;
+Servo TVCYservo;
 
 Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
@@ -78,6 +79,7 @@ void printMPUAngles();
 void printBMPSensorDetails();
 void i2c_Scanner();
 void PIDfunc();
+void servoSweep();
 
 
 #define LED_PIN 11
@@ -97,7 +99,12 @@ void setup() {
   init_BMPsensor();
   //setup LED Lights
   init_LEDlights();
-  
+  //Check LED Lights
+
+
+  //attach servos
+  TVCXservo.attach(3);
+  TVCYservo.attach(4);
 }
 
 
@@ -105,13 +112,21 @@ void setup() {
 
 // the loop routine runs over and over again forever:
 void loop() {
-
-
-  turnOnTurnOffL();
   printBMPSensorDetails();
   printMPUAngles();
-
-
+  turnOnTurnOffL();
+     for(pos = 0; pos <= 180; pos += 1) // goes from 0 degrees to 180 degrees 
+  {                                  // in steps of 1 degree 
+    TVCXservo.write(pos);              // tell servo to go to position in variable 'pos' 
+    TVCYservo.write(pos * (1/2));
+    delay(15);                       // waits 15ms for the servo to reach the position 
+  } 
+  for(pos = 180; pos>=0; pos-=1)     // goes from 180 degrees to 0 degrees 
+  {                                
+    TVCXservo.write(pos);              // tell servo to go to position in variable 'pos' 
+    TVCYservo.write(pos * 0.5);
+    delay(15);                       // waits 15ms for the servo to reach the position 
+  }
 
 }
 
@@ -157,11 +172,11 @@ void i2c_Scanner() {
 
 }
 
-void turnOnTurnOffL() {
-  digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(100);               // wait for a second
-  digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-  delay(100);
+void turnOnTurnOffL() {                                                                                                 
+    digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(70);               // wait for a second
+    digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
+    delay(70);
 }
 
 void init_LEDlights() {
