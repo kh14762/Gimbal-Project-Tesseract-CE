@@ -70,7 +70,6 @@ delay(500);
 #endif
 
 Serial.begin(115200);
-while(!Serial);
 
 //  initialize device
 Serial.println(F("Initializing I2C devices..."));
