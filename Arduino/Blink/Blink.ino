@@ -8,10 +8,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
-#include <Thread.h>
-#include <ThreadController.h>
 #include <I2Cdev.h>
-#include <AutoPID.h>
 #include <SD.h>
 #include <SPIFlash.h>
 #include <Servo.h>
@@ -49,8 +46,8 @@ int Pyro4 = 23;
 //initialize TVC servos
 int TVCXpin = 3;
 int TVCYpin = 4;
-Servo TVCXservp;
-Servo TVCYservp;
+Servo TVCXservo;
+Servo TVCYservo;
 
 Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
@@ -84,27 +81,13 @@ double kp = 3.44;
 double ki = 0.048;
 double kd =1.92; //2.6
 
-double throttle = 1300;
-float desired_angle = 0;
-
 #define OUTPUT_READABLE_ACCELGYRO
-
-
-//Cal
-
-//Create a new AutoPID object
-AutoPID myPID(double *input, double *setpoint, double *output,
-              double outputMin, double outputMax,
-              double Kp, double Ki, double Kd);
-
 // Pin 13 has an LED connected on most Arduino boards.
 // Pin 11 has the LED on Teensy 2.0
 // Pin 6  has the LED on Teensy++ 2.0
 // Pin 13 has the LED on Teensy 3.0
 // give it a name:
 int led = 13;
-String myName;
-String videoTitle;
 
 void turnOnTurnOffL();
 void init_BMPsensor();
@@ -112,7 +95,6 @@ void init_LEDlights();
 void init_MPUSensor();
 void printBMPSensorDetails();
 void i2c_Scanner();
-void PIDfunc();
 
 
 #define LED_PIN 11
@@ -126,7 +108,8 @@ void setup() {
   init_MPUsensor();
   //setup LED Lights
   init_LEDlights();
-  
+  //scan for i2c library
+  i2c_Scanner();
 }
 
 
@@ -139,7 +122,6 @@ void loop() {
   turnOnTurnOffL();
   printBMPSensorDetails();
   printMPUSensorReadout();
-  i2c_Scanner();
 
 
 
@@ -325,22 +307,4 @@ void printMPUSensorReadout() {
   blinkState = !blinkState;
   digitalWrite(LED_PIN, blinkState);
   delay(100);
-}
-
-
-
-void PIDfunc() {
-  /*
-     previous_error := 0
-    integral := 0
-
-    loop:
-      error := setpoint − measured_value
-      integral := integral + error × dt
-      derivative := (error − previous_error) / dt
-      output := Kp × error + Ki × integral + Kd × derivative
-      previous_error := error
-      wait(dt)
-      goto loop
-  */
 }
