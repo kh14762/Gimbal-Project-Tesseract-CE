@@ -13,6 +13,7 @@ Servo servoX;
 Servo servoY;
 int servoXpin = 3;
 int servoYpin = 4;
+
 int servoXPos = 0;
 int servoYPos = 0;
 
@@ -29,7 +30,7 @@ uint16_t packetSize;
 uint16_t fifoCount;
 uint8_t fifoBuffer[64];
 
-//  orientation/mation variables
+//  orientation/motion variables
 Quaternion q;              //[w, x, y, z]
 VectorInt16 aa;             //[x, y, z]
 VectorInt16 aaReal;         //[x, y, z]
@@ -37,9 +38,9 @@ VectorInt16 aaWorld;        //[x, y, z]
 VectorFloat gravity;        //[x, y, z]
 float ypr[3];               //[yaw, pitch, roll] yaw/pitch/roll container and gravity vector
 
+#define YAW    0
 #define PITCH  1
 #define ROLL   2
-#define YAW    0
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -47,18 +48,16 @@ float ypr[3];               //[yaw, pitch, roll] yaw/pitch/roll container and gr
 
 void setup() 
 {
-
 servoX.attach(servoXpin);
 servoY.attach(servoYpin);
-delay(50);
-servoX.write(0);
-servoY.write(60);
-delay(500);
-servoX.write(180);
-servoY.write(120);
-delay(500);
-servoX.write(0);
-servoY.write(90);
+//servoX.write(0);
+//servoY.write(60);
+//delay(500);
+//servoX.write(180);
+//servoY.write(120);
+//delay(500);
+//servoX.write(0);
+//servoY.write(90);
 delay(500);
 
 //  join I2C bus
@@ -84,12 +83,13 @@ Serial.println(F("Initializing DMP"));
 devStatus = mpu.dmpInitialize();
 
 //Input Calibrated Offsets Here: Specific for each unit and each mounting configuration
-mpu.setXGyroOffset(118);
-mpu.setYGyroOffset(-44);
-mpu.setZGyroOffset(337);
-mpu.setXAccelOffset(-651);
-mpu.setYAccelOffset(670);
-mpu.setZAccelOffset(1895);
+//offsets when the MPU6050 is Flat
+mpu.setXGyroOffset(2);
+mpu.setYGyroOffset(39);
+mpu.setZGyroOffset(-33);
+mpu.setXAccelOffset(-951);
+mpu.setYAccelOffset(987);
+mpu.setZAccelOffset(1180);
 
 //  make sure it worked (returned 0 if it did)
 if (devStatus == 0) {
@@ -177,9 +177,17 @@ void processAccelGyro()
     //flush buffer to prevent overflow
     mpu.resetFIFO();
 
-    servoX.write(-mpuPitch + 90);
-    servoY.write(mpuRoll + 90);
-
+    //limit writes to TVC tolerence 
+    if ((mpuRoll < -63 && mpuRoll > -121.58) && (mpuYaw > -30 && mpuYaw < 30)) {
+    servoX.write(-mpuYaw + 80);
+   //ypitch and roll are backwards?
+    servoY.write(-mpuRoll);
+    }
+    
+    //Print Yaw & Roll Values
+    Serial.printf("Yaw: %f    Roll: %f", mpuYaw, mpuRoll);
+    Serial.println();
+  
     //flush buffer to prevent overflow
     mpu.resetFIFO();
   }
